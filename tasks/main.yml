@@ -1,0 +1,33 @@
+---
+- name: Adding Postgresql repository
+  become: yes
+  yum:
+    name: 
+      - "{{ pg_repo }}"
+    state: present
+
+- name: "Installing Postgresql-{{ pg_version }} Server"
+  become: yes
+  yum:
+    name: "postgresql{{ pg_version }}-server"
+    state: present
+
+- name: Checking if Postgresql-{{ pg_version }} has been initialized
+  become: yes
+  stat:
+    path: "{{ pg_data_dir }}/PG_VERSION"
+  register: postgres_data
+
+- name: Initializing Postgresql-{{ pg_version }} database
+  become: yes
+  become_user: postgres
+  shell: "/usr/pgsql-{{ pg_version }}/bin/initdb -D {{ pg_data_dir }}"
+  when: not postgres_data.stat.exists
+  notify: Start and enable postgresql
+
+- meta: flush_handlers
+
+- name: Populate service facts
+  service_facts:
+
+- debug: var=ansible_facts.services['postgresql-{{ pg_version }}.service']
